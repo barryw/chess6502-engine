@@ -169,6 +169,25 @@ suites {
       assert(peekbyte([SearchNullMoveAttempts]) == $01, "Null move attempt counter should increment")
       assert(peekbyte([SearchNullMoveCutoffs]) == $01, "Null move cutoff counter should increment")
       assert(peekbyte([SearchNullMoveEvalSkips]) == $00, "Passing static eval should not count as an eval skip")
+
+      jsr([TTClear], stop_on_rts = true, fail_on_brk = true)
+      memfill([NegamaxState], 64, $00)
+      [SearchDepth] = $01
+      [SearchSide] = $80
+      [SearchNullMoveAttempts] = $00
+      [SearchNullMoveCutoffs] = $00
+      [SearchNullMoveEvalSkips] = $00
+      [NegamaxState] + $0d = $03
+      [NegamaxState] + $0e = $80
+      [NegamaxState] + $0f = $9c
+
+      jsr([TryNullMovePrune], stop_on_rts = true, fail_on_brk = true)
+
+      assert(c == true, "Depth-three null move should clamp the child search and fail high")
+      assert(a == $9c, "Depth-three null cutoff should return beta")
+      assert(peekbyte([SearchDepth]) == $01, "Depth-three null move should restore SearchDepth")
+      assert(peekbyte([SearchNullMoveAttempts]) == $01, "Depth-three null move should count as an attempt")
+      assert(peekbyte([SearchNullMoveCutoffs]) == $01, "Depth-three null move should count as a cutoff")
     }
 
     test("null-move-skips-low-static-eval", "Null move avoids probes when static eval cannot reach beta") {

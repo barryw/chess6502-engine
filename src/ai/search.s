@@ -107,7 +107,7 @@ LMR_MIN_DEPTH = 2
 LMR_FULL_MOVES = 1
 ASPIRATION_DELTA = 20
 PVS_MIN_DEPTH = 4
-NULL_MOVE_MIN_DEPTH = 4
+NULL_MOVE_MIN_DEPTH = 3
 NULL_MOVE_REDUCTION = 3
 NULL_MOVE_MIN_PIECES = 8
 NULL_MOVE_EVAL_MARGIN = 8
@@ -2082,6 +2082,7 @@ __ai_search_null_eval_pass_0:
   sta SearchSide
 
 ; Child null-window search: -Negamax(depth - 1 - R, -beta, -beta + 1).
+; Depth-three nodes clamp to quiescence instead of underflowing the byte depth.
   lda SearchDepth
   sec
   sbc #$01
@@ -2102,6 +2103,9 @@ __ai_search_null_beta_ready_0:
   lda NegamaxState + 5, x
   sec
   sbc #NULL_MOVE_REDUCTION + 1
+  bcs __ai_search_null_child_depth_ready_0
+  lda #$00
+__ai_search_null_child_depth_ready_0:
   jsr Negamax
   jsr NegateSearchScore
   sta NullMoveScore
