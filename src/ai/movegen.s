@@ -781,8 +781,7 @@ __ai_movegen_capture_mvv_0:
 ; is not defended after the move is made.
   ldx $e1
   jsr CapturePassesSwapOff
-  bcs __ai_movegen_promote_capture_mvv_0
-  jmp __ai_movegen_bad_capture_mvv_0
+  bcc __ai_movegen_bad_capture_mvv_0
 
 __ai_movegen_promote_capture_mvv_0:
   ldx $e1
@@ -973,8 +972,7 @@ __ai_movegen_history_has_quiets_0:
 __ai_movegen_history_scan_loop_0:
   lda $e1
   cmp MoveCount
-  bcc __ai_movegen_history_score_move_0
-  jmp __ai_movegen_history_promote_0
+  bcs __ai_movegen_history_promote_0
 
 __ai_movegen_history_score_move_0:
   ldx $e1

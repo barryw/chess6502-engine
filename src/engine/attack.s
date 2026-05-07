@@ -195,8 +195,7 @@ __engine_attack_ortho_ray_0:
 __engine_attack_ortho_check_enemy_0:
   pla
   jsr CheckEnemyColor
-  bcc __engine_attack_ortho_next_dir_0
-  jmp __engine_attack_attacked_0
+  bcs __engine_attack_attacked_0
 
 __engine_attack_ortho_next_dir_0:
   ldx ray_dir

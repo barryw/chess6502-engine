@@ -3983,8 +3983,7 @@ __ai_search_skip_root_pawn_safety_0:
   bvc __ai_search_no_overflow_0
   eor #$80; Flip sign bit for overflow case
 __ai_search_no_overflow_0:
-  bmi __ai_search_score_not_better_0; If negative, score <= best
-  jmp __ai_search_score_better_0
+  bpl __ai_search_score_better_0
 
 __ai_search_score_not_better_0:
   jmp __ai_search_not_better_0
@@ -6212,8 +6211,7 @@ __ai_search_no_boxed_king_pawn_storm_0:
   ldx #$00
 __ai_search_book_legal_loop_0:
   cpx MoveCount
-  bne __ai_search_check_book_candidate_0
-  jmp __ai_search_no_book_move_0
+  beq __ai_search_no_book_move_0
 __ai_search_check_book_candidate_0:
   lda MoveListFrom, x
   cmp BestMoveFrom
@@ -6305,8 +6303,7 @@ __ai_search_iteration_score_ready_0:
   lda IterScore
   bmi __ai_search_check_max_depth_0; Negative scores are not winning mates
   cmp #MATE_SCORE
-  beq __ai_search_found_mate_0
-  jmp __ai_search_check_max_depth_0
+  bne __ai_search_check_max_depth_0
 
 __ai_search_found_mate_0:
   jmp __ai_search_time_done_0; Found forced mate, stop searching

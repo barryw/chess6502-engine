@@ -77,11 +77,8 @@ __engine_pieces_capture_white_0:
 
 __engine_pieces_no_capture_0:
   lda currentplayer
-  beq __engine_pieces_update_black_0
+  bne UpdateWhitePiecePosition
 
-  jmp UpdateWhitePiecePosition
-
-__engine_pieces_update_black_0:
   jmp UpdateBlackPiecePosition
 
 RemoveFromWhitePieceList:

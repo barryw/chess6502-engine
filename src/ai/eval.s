@@ -298,8 +298,7 @@ __ai_eval_pst_material_done_0:
 
 ; For black pieces, mirror the square (XOR with $38 = flip rank)
   lda $f1
-  beq __ai_eval_mirror_0
-  jmp __ai_eval_lookup_0
+  bne __ai_eval_lookup_0
 __ai_eval_mirror_0:
   lda $f5
   eor #$38; Mirror for black
@@ -447,7 +446,7 @@ EvaluatePawnPressure:
 __ai_eval_black_attacked_0:
   ldy $f2
   lda PawnAttackPenalty, y
-  jsr AddEvalUnsigned
+  jmp AddEvalUnsigned
 
 __ai_eval_done_1:
   rts
@@ -473,7 +472,7 @@ EvaluateQueenPressure:
 __ai_eval_black_attacked_1:
   ldy $f2
   lda QueenAttackPenalty, y
-  jsr AddEvalUnsigned
+  jmp AddEvalUnsigned
 
 __ai_eval_done_2:
   rts
@@ -501,7 +500,7 @@ EvaluateMinorPressure:
 
 __ai_eval_black_attacked_2:
   lda #KNIGHT_ATTACK_QUEEN_PENALTY
-  jsr AddEvalUnsigned
+  jmp AddEvalUnsigned
 
 __ai_eval_done_3:
   rts
