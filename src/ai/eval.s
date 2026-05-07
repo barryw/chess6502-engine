@@ -96,22 +96,26 @@ QueenAttackPenalty:
 ; Evaluation result (16-bit signed)
 ; Positive = white advantage, negative = black advantage
 ;
+.segment "BSS"
+
 EvalScore:
-  .word $0000
+  .res 2
 EvalNonPawnCount:
-  .byte $00
+  .res 1
 EvalPawnCount:
-  .byte $00
+  .res 1
 EvalQueenCount:
-  .byte $00
+  .res 1
 EvalEndgameFlag:
-  .byte $00
+  .res 1
 
 ;
 ; Pawn count storage per file (0-7)
 ;
-WhitePawnsPerFile: .res 8, $00
-BlackPawnsPerFile: .res 8, $00
+WhitePawnsPerFile: .res 8
+BlackPawnsPerFile: .res 8
+
+.segment "CODE"
 
 ;
 ; Evaluate material balance

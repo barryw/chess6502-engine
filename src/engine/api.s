@@ -142,13 +142,17 @@ ChessCheckGameState:
   sta EngineGameState
   rts
 
+.segment "BSS"
+
 CommitMoveFrom:
-  .byte $ff
+  .res 1
 CommitMoveTo:
-  .byte $ff
+  .res 1
 CommitMoveCleanTo:
-  .byte $ff
+  .res 1
 CommitMoveWasPawn:
-  .byte $00
+  .res 1
 CommitMoveWasCapture:
-  .byte $00
+  .res 1
+
+.segment "CODE"

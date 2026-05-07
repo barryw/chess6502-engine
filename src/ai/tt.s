@@ -30,21 +30,26 @@ TT_FLAG_ALPHA = 1
 TT_FLAG_BETA = 2
 
 ; TT probe results
-TTHit:        .byte $00; $00 = miss, $01 = hit
+.segment "BSS"
+
+TTHit:        .res 1; $00 = miss, $01 = hit
 TTMoveAvailable:
-  .byte $00; Hash matched; TTBestFrom/To can order moves
-TTFlag:       .byte $00; Flag from entry
-TTDepth:      .byte $00; Depth from entry
-TTScoreLo:    .byte $00; Score low byte
-TTScoreHi:    .byte $00; Score high byte
-TTBestFrom:   .byte $00; Best move from
-TTBestTo:     .byte $00; Best move to
+  .res 1; Hash matched; TTBestFrom/To can order moves
+TTFlag:       .res 1; Flag from entry
+TTDepth:      .res 1; Depth from entry
+TTScoreLo:    .res 1; Score low byte
+TTScoreHi:    .res 1; Score high byte
+TTBestFrom:   .res 1; Best move from
+TTBestTo:     .res 1; Best move to
 TTStoreFrom:
-  .byte $ff; Optional local move override for TTStore
+  .res 1; Optional local move override for TTStore
 TTStoreTo:
-  .byte $ff
+  .res 1
 TTStoreUseMove:
-  .byte $00; Store TTStoreFrom/To even when from is $ff
+  .res 1; Store TTStoreFrom/To even when from is $ff
+
+.segment "CODE"
+
 TTCurrentGeneration:
   .byte $01; Current valid generation tag
 

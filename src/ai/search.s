@@ -36,36 +36,14 @@ MAX_UNDO_DEPTH = MAX_DEPTH + MAX_QUIESCE_DEPTH
 UndoStack:
   .res MAX_UNDO_DEPTH * UNDO_ENTRY_SIZE
 
-.segment "CODE"
-
-; Current search depth (0 = root)
-SearchDepth:
-  .byte $00
-
-; Side to move at current search node ($80 = white, $00 = black)
-SearchSide:
-  .byte WHITE_COLOR
-
-QuiesceDepth:
-  .byte $00
-
 ; Previous-move metadata for bounded recapture extensions. Index by
 ; SearchDepth; MakeMove writes the child ply before incrementing SearchDepth.
 LastMoveToByDepth:
-  .res MAX_UNDO_DEPTH + 1, $ff
+  .res MAX_UNDO_DEPTH + 1
 LastMoveWasCaptureByDepth:
-  .res MAX_UNDO_DEPTH + 1, $00
+  .res MAX_UNDO_DEPTH + 1
 RecaptureExtensionUsedByDepth:
-  .res MAX_UNDO_DEPTH + 1, $00
-NextMoveUsedRecaptureExtension:
-  .byte $00
-
-; Time control state
-StartTimeLo:    .byte $00
-StartTimeHi:    .byte $00
-TimeBudgetLo:   .byte $00
-TimeBudgetHi:   .byte $00
-TimeUp:         .byte $00; $01 = time expired
+  .res MAX_UNDO_DEPTH + 1
 
 ;
 ; Killer Moves
@@ -74,7 +52,33 @@ TimeUp:         .byte $00; $01 = time expired
 ; Format: [depth*4] = from1, to1, from2, to2
 ;
 KillerMoves:
-  .res MAX_KILLER_DEPTH * 4, $00
+  .res MAX_KILLER_DEPTH * 4
+
+; Zero-initialized mutable search state.
+SearchDepth:
+  .res 1
+QuiesceDepth:
+  .res 1
+NextMoveUsedRecaptureExtension:
+  .res 1
+StartTimeLo:
+  .res 1
+StartTimeHi:
+  .res 1
+TimeBudgetLo:
+  .res 1
+TimeBudgetHi:
+  .res 1
+TimeUp:
+  .res 1
+RootRepeatSavedCurrentPlayer:
+  .res 1
+
+.segment "CODE"
+
+; Side to move at current search node ($80 = white, $00 = black)
+SearchSide:
+  .byte WHITE_COLOR
 
 ; Time budgets by difficulty level
 TimeBudgetTableLo:
@@ -123,9 +127,6 @@ LastEngineMoveFrom:
   .byte $ff
 LastEngineMoveTo:
   .byte $ff
-
-RootRepeatSavedCurrentPlayer:
-  .byte $00
 
 ;
 ; MakeMove
@@ -1859,41 +1860,45 @@ __ai_search_storm_next_move_0:
 ;
 ; Best move storage (set during search at root level)
 ;
+.segment "BSS"
+
 BestMoveFrom:
-  .byte $00
+  .res 1
 BestMoveTo:
-  .byte $00
+  .res 1
 RootShortcutFrom:
-  .byte $00
+  .res 1
 RootShortcutTo:
-  .byte $00
+  .res 1
 
 ; Root-level search telemetry. These are intentionally updated only around
 ; FindBestMove so normal node search does not pay per-node counter overhead.
 SearchCompletedDepth:
-  .byte $00
+  .res 1
 SearchRootMoveCount:
-  .byte $00
+  .res 1
 SearchUsedBook:
-  .byte $00
+  .res 1
 SearchAspirationAttempts:
-  .byte $00
+  .res 1
 SearchAspirationRetries:
-  .byte $00
+  .res 1
 SearchPVSSearches:
-  .byte $00
+  .res 1
 SearchPVSResearches:
-  .byte $00
+  .res 1
 SearchNullMoveAttempts:
-  .byte $00
+  .res 1
 SearchNullMoveCutoffs:
-  .byte $00
+  .res 1
 SearchNullMoveEvalSkips:
-  .byte $00
+  .res 1
 SearchHistoryUpdates:
-  .byte $00
+  .res 1
 SearchHistoryActive:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ;
 ; Search state variables for Negamax recursion
@@ -2373,13 +2378,17 @@ __ai_search_q_return_alpha_0:
 
 ; Quiescence state storage. Index 0 is unused by the current depth counter,
 ; which enters active nodes at depth 1 and evaluates immediately at depth 6.
-QAlpha:   .res MAX_QUIESCE_DEPTH, $00
-QBeta:    .res MAX_QUIESCE_DEPTH, $00
-QFrom:    .res MAX_QUIESCE_DEPTH, $00
-QTo:      .res MAX_QUIESCE_DEPTH, $00
-QScore:   .res MAX_QUIESCE_DEPTH, $00
-QMoveIdx: .res MAX_QUIESCE_DEPTH, $00
-QInCheck: .res MAX_QUIESCE_DEPTH, $00
+.segment "BSS"
+
+QAlpha:   .res MAX_QUIESCE_DEPTH
+QBeta:    .res MAX_QUIESCE_DEPTH
+QFrom:    .res MAX_QUIESCE_DEPTH
+QTo:      .res MAX_QUIESCE_DEPTH
+QScore:   .res MAX_QUIESCE_DEPTH
+QMoveIdx: .res MAX_QUIESCE_DEPTH
+QInCheck: .res MAX_QUIESCE_DEPTH
+
+.segment "CODE"
 
 ;
 ; PromoteTTMove
@@ -4174,31 +4183,35 @@ __ai_search_store_node_0:
 ; [6] = alpha (lower bound)
 ; [7] = beta (upper bound)
 ;
+.segment "BSS"
+
 NegamaxState:
-  .res MAX_DEPTH * 8, $00
+  .res MAX_DEPTH * 8
 
 ; Original alpha and best move for each active search ply. Kept separate to
 ; avoid expanding the hot NegamaxState stride.
 NegamaxOrigAlpha:
-  .res MAX_DEPTH, $00
+  .res MAX_DEPTH
 NegamaxBestFrom:
-  .res MAX_DEPTH, $ff
+  .res MAX_DEPTH
 NegamaxBestTo:
-  .res MAX_DEPTH, $ff
+  .res MAX_DEPTH
 NegamaxFutility:
-  .res MAX_DEPTH, $00
+  .res MAX_DEPTH
 NegamaxChildDepth:
-  .res MAX_DEPTH, $00
+  .res MAX_DEPTH
 NegamaxPVSUsed:
-  .res MAX_DEPTH, $00
+  .res MAX_DEPTH
 NullSavedEnPassant:
-  .res MAX_DEPTH, $ff
+  .res MAX_DEPTH
 NullSavedNextMoveExtension:
-  .res MAX_DEPTH, $00
+  .res MAX_DEPTH
 NullMoveScore:
-  .byte $00
+  .res 1
 NullStaticEval:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ;
 ; TryApplyRecaptureExtension
@@ -6352,15 +6365,25 @@ __ai_search_remember_clear_0:
   rts
 
 ; Iterative deepening state
+.segment "BSS"
+
 IterDepth:
-  .byte $00
+  .res 1
 MaxSearchDepth:
-  .byte $00
+  .res 1
 IterScore:
-  .byte $00
+  .res 1
+
+.segment "CODE"
+
 AspirationAlpha:
   .byte NEG_INFINITY
 AspirationBeta:
   .byte $7f
+
+.segment "BSS"
+
 SearchAspirationActive:
-  .byte $00
+  .res 1
+
+.segment "CODE"

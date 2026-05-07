@@ -18,13 +18,13 @@
 MAX_MOVES = 128
 
 ; Move count (number of moves in list)
+.segment "BSS"
+
 MoveCount:
-  .byte $00
+  .res 1
 
 ; Move list: pairs of (from, to) squares
 ; Index by: MoveListFrom[i], MoveListTo[i]
-.segment "BSS"
-
 MoveListFrom:
   .res MAX_MOVES
 

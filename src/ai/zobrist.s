@@ -67,8 +67,12 @@ ZobristSeed:
   rts
 
 ; Storage for last random value (for testing)
+.segment "BSS"
+
 ZobristLastRandom:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ;
 ; Initialize all Zobrist tables with random values
@@ -167,14 +171,14 @@ ZobristCastling:
 ZobristEnPassant:
   .res 16
 
-.segment "CODE"
-
 ; Current position hash (2 bytes for better collision resistance)
 ZobristHash:
-  .word $0000
+  .res 2
 
 ZobristTablesInitialized:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ;
 ; Compute full Zobrist hash from current board position

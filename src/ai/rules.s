@@ -145,8 +145,12 @@ __ai_rules_repetition_draw_0:
   sec; Draw by repetition
   rts
 
+.segment "BSS"
+
 RepeatCount:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ;
 ; ClearPositionHistory
@@ -492,21 +496,25 @@ __ai_rules_normal_0:
   rts
 
 ; Temporary storage for insufficient material check
-WhitePawnCnt:     .byte $00
-WhiteKnightCnt:   .byte $00
-WhiteBishopCnt:   .byte $00
-WhiteRookCnt:     .byte $00
-WhiteQueenCnt:    .byte $00
-BlackPawnCnt:     .byte $00
-BlackKnightCnt:   .byte $00
-BlackBishopCnt:   .byte $00
-BlackRookCnt:     .byte $00
-BlackQueenCnt:    .byte $00
-WhiteMinorCnt:    .byte $00
-BlackMinorCnt:    .byte $00
-WhiteBishopSquare: .byte $00
-BlackBishopSquare: .byte $00
-TempSq:           .byte $00
-TempColor:        .byte $00
-TempCol:          .byte $00
-TempBishopColor:  .byte $00
+.segment "BSS"
+
+WhitePawnCnt:      .res 1
+WhiteKnightCnt:    .res 1
+WhiteBishopCnt:    .res 1
+WhiteRookCnt:      .res 1
+WhiteQueenCnt:     .res 1
+BlackPawnCnt:      .res 1
+BlackKnightCnt:    .res 1
+BlackBishopCnt:    .res 1
+BlackRookCnt:      .res 1
+BlackQueenCnt:     .res 1
+WhiteMinorCnt:     .res 1
+BlackMinorCnt:     .res 1
+WhiteBishopSquare: .res 1
+BlackBishopSquare: .res 1
+TempSq:            .res 1
+TempColor:         .res 1
+TempCol:           .res 1
+TempBishopColor:   .res 1
+
+.segment "CODE"

@@ -18,8 +18,12 @@
 ;
 
 ; The difficulty level for the current search.
+.segment "BSS"
+
 difficulty:
-  .byte $00
+  .res 1
+
+.segment "CODE"
 
 ; Keep track of the current player. 0 = black, 1 = white
 currentplayer:
@@ -92,9 +96,6 @@ enpassantsq:
 ;
 
 ; Halfmove clock for 50-move rule
-HalfmoveClock:
-  .byte $00
-
 ; Full move number (increments after Black's move)
 FullmoveNumber:
   .word $0001
@@ -103,15 +104,16 @@ FullmoveNumber:
 MAX_HISTORY = 200
 .segment "BSS"
 
+HalfmoveClock:
+  .res 1
 PositionHistoryLo:
   .res MAX_HISTORY
 PositionHistoryHi:
   .res MAX_HISTORY
+HistoryCount:
+  .res 1
 
 .segment "CODE"
-
-HistoryCount:
-  .byte $00
 
 ;
 ; Direction Offset Tables
@@ -152,9 +154,6 @@ promotionsq:
   .byte $ff
 
 ; Selected promotion piece type
-promotionpiece:
-  .byte $00
-
 ;
 ; Piece Lists for Optimized Move Generation
 ;
@@ -173,5 +172,11 @@ BlackPieceCount:
   .byte 16
 
 ; Temp storage for piece list operations
+.segment "BSS"
+
+promotionpiece:
+  .res 1
 piecelist_idx:
-  .byte $00
+  .res 1
+
+.segment "CODE"
