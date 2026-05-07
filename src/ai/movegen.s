@@ -424,7 +424,7 @@ __ai_movegen_white_queenside_0:
 ; Add white queenside castle: e1 ($74) -> c1 ($72)
   lda #$74
   ldx #$72
-  jsr AddMove
+  jmp AddMove
 
 __ai_movegen_castle_done_0:
   rts
@@ -1230,7 +1230,7 @@ AddCaptureIfEnemy:
 
   lda $f7
   ldx $fa
-  jsr AddMove
+  jmp AddMove
 
 __ai_movegen_not_capture_0:
   rts

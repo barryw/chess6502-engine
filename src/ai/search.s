@@ -2902,7 +2902,7 @@ ApplyRootReverseMovePenalty:
   bne __ai_search_reverse_done_0
 
   lda #ROOT_REVERSE_MOVE_PENALTY
-  jsr ApplyRootPenaltyAmount
+  jmp ApplyRootPenaltyAmount
 
 __ai_search_reverse_done_0:
   rts
@@ -2930,7 +2930,7 @@ ApplyRootHistoryPenalty:
 
 __ai_search_history_seen_once_0:
   lda #ROOT_HISTORY_SEEN_PENALTY
-  jsr ApplyRootPenaltyAmount
+  jmp ApplyRootPenaltyAmount
 
 __ai_search_history_done_0:
   rts
