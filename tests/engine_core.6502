@@ -163,6 +163,42 @@ suites {
       assert(peekbyte($eb) == $50, "Moving the black queen should escape the hanging-queen penalty")
     }
 
+    test("book-safety-rejects-heavy-piece-attack", "Book safety rejects rook and queen moves onto generic attacks") {
+      memfill([Board88], 128, $30)
+      [Board88] + $77 = $b6
+      [Board88] + $43 = $b5
+      [Board88] + $00 = $36
+      [Board88] + $04 = $34
+      [whitekingsq] = $77
+      [blackkingsq] = $00
+      [BestMoveFrom] = $43
+      [BestMoveTo] = $34
+
+      jsr([BookMoveAvoidsPawnAttack], stop_on_rts = true, fail_on_brk = true)
+
+      assert(c == false, "Book safety should reject a queen move onto a rook attack")
+
+      [Board88] + $34 = $35
+
+      jsr([BookMoveAvoidsPawnAttack], stop_on_rts = true, fail_on_brk = true)
+
+      assert(c == true, "Book safety should allow queen captures of a queen")
+
+      memfill([Board88], 128, $30)
+      [Board88] + $77 = $b6
+      [Board88] + $43 = $b4
+      [Board88] + $00 = $36
+      [Board88] + $04 = $34
+      [whitekingsq] = $77
+      [blackkingsq] = $00
+      [BestMoveFrom] = $43
+      [BestMoveTo] = $34
+
+      jsr([BookMoveAvoidsPawnAttack], stop_on_rts = true, fail_on_brk = true)
+
+      assert(c == false, "Book safety should reject a rook move onto a rook attack")
+    }
+
     test("null-move-prunes-deep-safe-node", "Guarded null move can fail high and restore state", timeout = 13000000) {
       jsr([InitZobristTables], stop_on_rts = true, fail_on_brk = true)
       jsr([TTClear], stop_on_rts = true, fail_on_brk = true)

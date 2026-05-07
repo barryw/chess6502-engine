@@ -4384,8 +4384,8 @@ __ai_search_done_13:
 
 ;
 ; BookMoveAvoidsPawnAttack
-; Output: Carry set if the book candidate does not move a valuable piece onto
-; an enemy pawn attack. Pawns and kings are ignored.
+; Output: Carry set if the book candidate does not move a valuable piece onto a
+; cheap tactical attack. Pawns and kings are ignored.
 ;
 BookMoveAvoidsPawnAttack:
   ldx BestMoveFrom
@@ -4406,6 +4406,32 @@ BookMoveAvoidsPawnAttack:
   and #$7f
   sta $f0
   jsr IsPiecePawnAttacked
+  bcs __ai_search_unsafe_0
+
+  lda $f2
+  cmp #ROOK_TYPE
+  bcc __ai_search_safe_0
+
+; Rooks and queens should not leave book into a generically attacked square
+; unless the candidate captures a rook or queen.
+  ldx $f0
+  lda Board88, x
+  cmp #EMPTY_PIECE
+  beq __ai_search_check_book_attack_0
+  and #$07
+  cmp #ROOK_TYPE
+  bcs __ai_search_safe_0
+
+__ai_search_check_book_attack_0:
+  lda $f0
+  sta attack_sq
+  lda #BLACKS_TURN
+  ldx $f1
+  bne __ai_search_book_attack_color_set_0
+  lda #WHITES_TURN
+__ai_search_book_attack_color_set_0:
+  sta attack_color
+  jsr IsSquareAttacked
   bcs __ai_search_unsafe_0
 __ai_search_safe_0:
   sec
