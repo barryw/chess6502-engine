@@ -54,6 +54,11 @@ MVV_LVA_ScoreValues:
 MoveScores:
   .res MAX_MOVES, $00
 
+; Compact quiet-move history table. Index is (from << 1) xor to, masked to
+; 7 bits, so it is move-shaped without paying for a full from/to matrix.
+HistoryScores:
+  .res 128, $00
+
 ;
 ; Clear move list
 ; Resets count to zero
@@ -942,6 +947,82 @@ __ai_movegen_next_killer_check_0:
   jmp __ai_movegen_killer_reorder_loop_0
 
 __ai_movegen_killer_done_reorder_0:
+  lda SearchHistoryActive
+  bne __ai_movegen_history_start_0
+  rts
+
+__ai_movegen_history_start_0:
+; Promote the best historical quiet move to the front of the remaining quiets.
+  lda $e6
+  cmp MoveCount
+  bcc __ai_movegen_history_has_quiets_0
+  rts
+
+__ai_movegen_history_has_quiets_0:
+  sta $e1; scan index
+  sta $e4; best index
+  lda #$00
+  sta $e5; best score
+
+__ai_movegen_history_scan_loop_0:
+  lda $e1
+  cmp MoveCount
+  bcc __ai_movegen_history_score_move_0
+  jmp __ai_movegen_history_promote_0
+
+__ai_movegen_history_score_move_0:
+  ldx $e1
+  lda MoveListTo, x
+  bmi __ai_movegen_history_next_0; Promotions are tactical, not history.
+  and #$7f
+  tay
+  lda Board88, y
+  cmp #EMPTY_PIECE
+  bne __ai_movegen_history_next_0; Captures keep MVV-LVA ordering.
+
+  lda MoveListFrom, x
+  asl
+  eor MoveListTo, x
+  and #$7f
+  tay
+  lda HistoryScores, y
+  cmp $e5
+  beq __ai_movegen_history_next_0
+  bcc __ai_movegen_history_next_0
+  sta $e5
+  lda $e1
+  sta $e4
+
+__ai_movegen_history_next_0:
+  inc $e1
+  jmp __ai_movegen_history_scan_loop_0
+
+__ai_movegen_history_promote_0:
+  lda $e5
+  bne __ai_movegen_history_swap_0
+  rts
+
+__ai_movegen_history_swap_0:
+  ldx $e4
+  ldy $e6
+  cpx $e6
+  bne __ai_movegen_history_do_swap_0
+  rts
+
+__ai_movegen_history_do_swap_0:
+  lda MoveListFrom, x
+  pha
+  lda MoveListFrom, y
+  sta MoveListFrom, x
+  pla
+  sta MoveListFrom, y
+
+  lda MoveListTo, x
+  pha
+  lda MoveListTo, y
+  sta MoveListTo, x
+  pla
+  sta MoveListTo, y
   rts
 
 ;

@@ -964,6 +964,8 @@ InitSearch:
   sta SearchNullMoveAttempts
   sta SearchNullMoveCutoffs
   sta SearchNullMoveEvalSkips
+  sta SearchHistoryUpdates
+  sta SearchHistoryActive
   sta LastMoveWasCaptureByDepth
   sta RecaptureExtensionUsedByDepth
   sta NextMoveUsedRecaptureExtension
@@ -1035,6 +1037,47 @@ __ai_search_store_new_killer_0:
   sta KillerMoves + 1, y
 
 __ai_search_killer_done_0:
+  rts
+
+;
+; ClearHistory
+; Clear quiet move history for a fresh iterative search.
+; Clobbers: A, X
+;
+ClearHistory:
+  ldx #$7f
+  lda #$00
+__ai_search_clear_history_loop_0:
+  sta HistoryScores, x
+  dex
+  bpl __ai_search_clear_history_loop_0
+  sta SearchHistoryActive
+  sta SearchHistoryUpdates
+  rts
+
+;
+; StoreHistory
+; Reward a quiet beta-cutoff move for future ordering.
+; Input: $f0 = from, $f1 = cleaned to, A = bonus
+; Clobbers: A, Y, $f2
+;
+StoreHistory:
+  sta $f2
+  lda $f0
+  asl
+  eor $f1
+  and #$7f
+  tay
+  lda HistoryScores, y
+  clc
+  adc $f2
+  bcc __ai_search_history_score_ready_0
+  lda #$ff
+__ai_search_history_score_ready_0:
+  sta HistoryScores, y
+  lda #$01
+  sta SearchHistoryActive
+  inc SearchHistoryUpdates
   rts
 
 ;
@@ -1837,6 +1880,10 @@ SearchNullMoveAttempts:
 SearchNullMoveCutoffs:
   .byte $00
 SearchNullMoveEvalSkips:
+  .byte $00
+SearchHistoryUpdates:
+  .byte $00
+SearchHistoryActive:
   .byte $00
 
 ;
@@ -3996,6 +4043,20 @@ __ai_search_no_overflow3_0:
   ldy SearchDepth
   jsr StoreKiller
 
+; Reward the quiet cutoff for history ordering in later nodes/iterations.
+  lda SearchDepth
+  asl
+  asl
+  asl
+  tax
+  lda NegamaxState + 3, x
+  sta $f0
+  lda NegamaxState + 4, x
+  and #$7f
+  sta $f1
+  lda NegamaxState + 5, x
+  jsr StoreHistory
+
 __ai_search_not_killer_cutoff_0:
 ; Shallow beta-bound stores cost more than they save. Preserve TT bound
 ; storage for nodes deep enough to be useful for later probes.
@@ -6146,6 +6207,7 @@ __ai_search_book_move_ok_0:
 __ai_search_no_book_move_0:
 ; Not in book - do normal search
   jsr ClearKillers
+  jsr ClearHistory
   jsr TTBeginSearch
 
 ; Get time budget based on difficulty

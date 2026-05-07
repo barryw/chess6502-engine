@@ -194,7 +194,7 @@ suites {
       assert(peekbyte([SearchDepth]) == $00, "SearchDepth should return to zero")
       assert(peekbyte([SearchNullMoveAttempts]) > $00, "Middlegame search should attempt null-move pruning")
       assert(peekbyte([SearchNullMoveCutoffs]) > $00, "Middlegame search should get null-move cutoffs")
-      assert(cycles < 65000000, "Depth-five middlegame null-move benchmark under 65M cycles")
+      assert(cycles < 58000000, "Depth-five middlegame null-move benchmark under 58M cycles")
     }
 
     test("bench-hard-promotes-queen", "Hard FindBestMove promotes to queen", tags = "benchmark,strength,performance,promotion,hard", timeout = 13000000) {

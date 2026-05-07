@@ -68,6 +68,48 @@ suites {
       assert(peekbyte([SearchPVSSearches]) > $00, "Depth-three search should use PVS probes")
     }
 
+    test("history-rewards-quiet-cutoff", "Quiet beta cutoffs update compact history ordering") {
+      jsr([ClearHistory], stop_on_rts = true, fail_on_brk = true)
+
+      $f0 = $64
+      $f1 = $44
+      a = $05
+      jsr([StoreHistory], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([SearchHistoryActive]) == $01, "StoreHistory should activate history ordering")
+      assert(peekbyte([SearchHistoryUpdates]) == $01, "StoreHistory should report one update")
+      assert(peekbyte([HistoryScores] + $0c) == $05, "History score should use the compact from/to index")
+
+      $f0 = $64
+      $f1 = $44
+      a = $ff
+      jsr([StoreHistory], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([HistoryScores] + $0c) == $ff, "History scores should saturate at 255")
+    }
+
+    test("history-orders-quiet-moves", "Move ordering promotes the best historical quiet move") {
+      jsr([ClearKillers], stop_on_rts = true, fail_on_brk = true)
+      jsr([ClearHistory], stop_on_rts = true, fail_on_brk = true)
+
+      memfill([Board88], 128, $30)
+      [MoveCount] = $03
+      [MoveListFrom] + $00 = $60
+      [MoveListTo] + $00 = $50
+      [MoveListFrom] + $01 = $64
+      [MoveListTo] + $01 = $44
+      [MoveListFrom] + $02 = $67
+      [MoveListTo] + $02 = $57
+      [HistoryScores] + $0c = $40
+      [SearchHistoryActive] = $01
+      [SearchDepth] = $01
+
+      jsr([OrderMovesMVVLVA], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([MoveListFrom]) == $64, "Best historical quiet move should be promoted")
+      assert(peekbyte([MoveListTo]) == $44, "Promoted history move should keep its destination")
+    }
+
     test("null-move-prunes-deep-safe-node", "Guarded null move can fail high and restore state", timeout = 13000000) {
       jsr([InitZobristTables], stop_on_rts = true, fail_on_brk = true)
       jsr([TTClear], stop_on_rts = true, fail_on_brk = true)
