@@ -151,6 +151,93 @@ suites {
       assert(peekbyte([MoveListTo]) == $04, "Quiet promotion destination should move to the front")
     }
 
+    test("check-extension-extends-near-horizon-checks", "Near-horizon checking moves search one ply deeper without stacking extensions") {
+      memfill([Board88], 128, $30)
+      [Board88] + $70 = $b6
+      [Board88] + $77 = $b4
+      [Board88] + $04 = $36
+      [whitekingsq] = $70
+      [blackkingsq] = $04
+      [SearchDepth] = $00
+      [SearchSide] = $80
+      [NegamaxState] + $05 = $02
+      [NegamaxChildDepth] = $01
+      [RecaptureExtensionUsedByDepth] + $01 = $00
+      [NextMoveUsedRecaptureExtension] = $00
+      [SearchCheckExtensions] = $00
+
+      a = $77
+      x = $74
+      jsr([MakeMove], stop_on_rts = true, fail_on_brk = true)
+      jsr([TryApplyCheckExtensionAfterMove], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([NegamaxChildDepth]) == $02, "A near-horizon checking rook move should extend child depth")
+      assert(peekbyte([SearchCheckExtensions]) == $01, "Check extension should increment telemetry")
+
+      a = $77
+      x = $74
+      jsr([UnmakeMove], stop_on_rts = true, fail_on_brk = true)
+
+      [SearchDepth] = $00
+      [SearchSide] = $80
+      [NegamaxState] + $05 = $02
+      [NegamaxChildDepth] = $01
+      [RecaptureExtensionUsedByDepth] + $01 = $00
+      [NextMoveUsedRecaptureExtension] = $00
+      [SearchCheckExtensions] = $00
+
+      a = $77
+      x = $67
+      jsr([MakeMove], stop_on_rts = true, fail_on_brk = true)
+      jsr([TryApplyCheckExtensionAfterMove], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([NegamaxChildDepth]) == $01, "A non-checking move should not extend child depth")
+      assert(peekbyte([SearchCheckExtensions]) == $00, "Non-checking moves should not increment check telemetry")
+
+      a = $77
+      x = $67
+      jsr([UnmakeMove], stop_on_rts = true, fail_on_brk = true)
+
+      [SearchDepth] = $00
+      [SearchSide] = $80
+      [NegamaxState] + $05 = $02
+      [NegamaxChildDepth] = $01
+      [NextMoveUsedRecaptureExtension] = $01
+      [SearchCheckExtensions] = $00
+
+      a = $77
+      x = $74
+      jsr([MakeMove], stop_on_rts = true, fail_on_brk = true)
+      jsr([TryApplyCheckExtensionAfterMove], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([NegamaxChildDepth]) == $01, "Check extension should not stack on a recapture extension")
+      assert(peekbyte([SearchCheckExtensions]) == $00, "Stacked extension skip should not increment telemetry")
+
+      a = $77
+      x = $74
+      jsr([UnmakeMove], stop_on_rts = true, fail_on_brk = true)
+
+      [SearchDepth] = $00
+      [SearchSide] = $80
+      [NegamaxState] + $05 = $03
+      [NegamaxChildDepth] = $02
+      [RecaptureExtensionUsedByDepth] + $01 = $00
+      [NextMoveUsedRecaptureExtension] = $00
+      [SearchCheckExtensions] = $00
+
+      a = $77
+      x = $74
+      jsr([MakeMove], stop_on_rts = true, fail_on_brk = true)
+      jsr([TryApplyCheckExtensionAfterMove], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([NegamaxChildDepth]) == $02, "Deeper checking moves should not add a full extra root ply")
+      assert(peekbyte([SearchCheckExtensions]) == $00, "Deep check skip should not increment telemetry")
+
+      a = $77
+      x = $74
+      jsr([UnmakeMove], stop_on_rts = true, fail_on_brk = true)
+    }
+
     test("eval-rewards-bishop-pair", "Evaluation counts bishops and applies the bishop-pair bonus") {
       [EvalScore] = $00
       [EvalScore] + $01 = $00

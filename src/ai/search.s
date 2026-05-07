@@ -116,6 +116,7 @@ LMR_MIN_DEPTH = 2
 LMR_FULL_MOVES = 1
 ASPIRATION_DELTA = 20
 PVS_MIN_DEPTH = 4
+CHECK_EXTENSION_DEPTH = 2
 NULL_MOVE_MIN_DEPTH = 3
 NULL_MOVE_REDUCTION = 3
 NULL_MOVE_MIN_PIECES = 8
@@ -963,6 +964,7 @@ InitSearch:
   sta SearchAspirationRetries
   sta SearchPVSSearches
   sta SearchPVSResearches
+  sta SearchCheckExtensions
   sta SearchNullMoveAttempts
   sta SearchNullMoveCutoffs
   sta SearchNullMoveEvalSkips
@@ -1883,6 +1885,8 @@ SearchAspirationRetries:
 SearchPVSSearches:
   .res 1
 SearchPVSResearches:
+  .res 1
+SearchCheckExtensions:
   .res 1
 SearchNullMoveAttempts:
   .res 1
@@ -4005,6 +4009,7 @@ __ai_search_pvs_full_width_0:
   sty $f0; temp for X parameter
   ldx $f0
   jsr MakeMove
+  jsr TryApplyCheckExtensionAfterMove
 
 ; Recurse: score = -Negamax(depth - 1, -beta, -alpha)
 ; Recalculate state offset to get our depth
@@ -4463,6 +4468,47 @@ __ai_search_restore_done_0:
   ldx $f7
 
 __ai_search_done_11:
+  rts
+
+;
+; TryApplyCheckExtensionAfterMove
+; If the just-made move gives check near the horizon, search the child one ply
+; deeper. This is bounded and does not stack with recapture extension.
+; Call immediately after MakeMove, while SearchDepth is the child ply.
+; Clobbers: A, X, Y, $f7, attack_sq, attack_color
+;
+TryApplyCheckExtensionAfterMove:
+  lda SearchDepth
+  beq __ai_search_check_ext_done_0
+  cmp #MAX_DEPTH - 2
+  bcs __ai_search_check_ext_done_0
+  tay
+  lda RecaptureExtensionUsedByDepth, y
+  bne __ai_search_check_ext_done_0
+
+  lda SearchDepth
+  sec
+  sbc #$01
+  sta $f7; parent ply
+  asl
+  asl
+  asl
+  tax
+  lda NegamaxState + 5, x
+  cmp #CHECK_EXTENSION_DEPTH
+  bne __ai_search_check_ext_done_0
+
+  jsr IsCurrentSideInCheck
+  bcc __ai_search_check_ext_done_0
+
+  ldy $f7
+  lda NegamaxChildDepth, y
+  clc
+  adc #$01
+  sta NegamaxChildDepth, y
+  inc SearchCheckExtensions
+
+__ai_search_check_ext_done_0:
   rts
 
 ;
