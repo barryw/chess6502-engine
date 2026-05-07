@@ -275,7 +275,6 @@ __ai_search_do_castle_rook_0:
   ldy UndoStack + 5, x; Y = rook to square
   lda $f5; A = rook piece
   sta Board88, y; Place rook at new position
-  jmp __ai_search_update_king_pos_0
 
 __ai_search_update_king_pos_0:
 ; Update king position tracker
@@ -1955,7 +1954,6 @@ __ai_search_negative_0:
   cmp #<-STATIC_EVAL_LIMIT
   bcs __ai_search_apply_side_0; >= static eval floor (as signed), fits
   lda #<-STATIC_EVAL_LIMIT
-  jmp __ai_search_apply_side_0
 
 __ai_search_apply_side_0:
 ; Now A has 8-bit score from white's perspective

@@ -552,7 +552,6 @@ __ai_eval_queen_0:
   sta $fe
   lda #$08
   jsr CountSlidingMobility
-  jmp ApplyMobilityScore
 
 ApplyMobilityScore:
   beq __ai_eval_done_4
