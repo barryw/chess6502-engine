@@ -149,23 +149,25 @@ __ai_zobrist_tables_ready_0:
 ; Piece indices: 0-5 = white P,N,B,R,Q,K; 6-11 = black P,N,B,R,Q,K
 ;
 
-.segment "CODE"
+.segment "BSS"
 
 ; Piece-square table: 12 pieces x 64 squares x 2 bytes = 1536 bytes
 ZobristPieces:
-  .res 1536, $00
+  .res 1536
 
 ; Side to move (2 bytes)
 ZobristSide:
-  .word $0000
+  .res 2
 
 ; Castling rights: 4 flags x 2 bytes = 8 bytes
 ZobristCastling:
-  .res 8, $00
+  .res 8
 
 ; En passant file: 8 files x 2 bytes = 16 bytes
 ZobristEnPassant:
-  .res 16, $00
+  .res 16
+
+.segment "CODE"
 
 ; Current position hash (2 bytes for better collision resistance)
 ZobristHash:

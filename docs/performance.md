@@ -26,14 +26,17 @@ Current standalone benchmark baseline:
 | hard black promotion | 451,005 | 650,000 |
 | hard rook activation | 513,728 | 750,000 |
 
-`make size` reports ld65 segment sizes from `build/engine_harness.dbg`. Current
-standalone ca65 size:
+`make size` reports ld65 segment sizes from `build/engine_harness.dbg`. `FILE`
+is the emitted PRG payload; `RUNTIME` includes `BSS` RAM reserved by the linker.
+Current standalone ca65 size:
 
 | Segment | Range | Bytes |
 | --- | --- | ---: |
 | `LOADADDR` | `$0000-$0001` | 2 |
-| `CODE` | `$0801-$6472` | 23,666 |
-| total PRG payload | | 23,668 |
+| `CODE` | `$0801-$5e58` | 22,104 |
+| `BSS` | `$5e59-$6472` | 1,562 |
+| PRG payload | | 22,106 |
+| runtime footprint | | 23,668 |
 
 Treat benchmark changes as suspicious until they have both a cycle explanation
 and a strength/correctness test result. The goal is to make every optimization

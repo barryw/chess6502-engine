@@ -4,11 +4,14 @@ The ca65 port is relocatable at the code/data segment level. Host targets should
 place these segments with their own linker config instead of editing engine code:
 
 - `CODE`: engine code and ordinary resident data
+- `BSS`: runtime tables and scratch buffers that are initialized by engine code
+  and are not emitted into the PRG payload
 - `PST`: optional piece-square-table segment when `ENGINE_FIXED_PST` is nonzero
 - `LOADADDR`: only used by the test PRG harness
 
 Runtime RAM not emitted into the binary:
 
+- `BSS`: currently includes generated Zobrist random tables
 - `ENGINE_TT_BASE`: base address for the 2KB transposition table (`TT_SIZE * TT_ENTRY_SIZE`)
 
 Zero page is the non-relocatable ABI surface in the current engine. The code uses

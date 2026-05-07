@@ -6,7 +6,10 @@ import argparse
 import re
 from pathlib import Path
 
-SEG_RE = re.compile(r'^seg\tid=\d+,name="(?P<name>[^"]+)",start=0x(?P<start>[0-9a-fA-F]+),size=0x(?P<size>[0-9a-fA-F]+)')
+SEG_RE = re.compile(
+    r'^seg\tid=\d+,name="(?P<name>[^"]+)",start=0x(?P<start>[0-9a-fA-F]+),'
+    r'size=0x(?P<size>[0-9a-fA-F]+),(?P<attrs>.*)$'
+)
 SYM_RE = re.compile(r'^sym\t.*?name="(?P<name>[^"]+)".*?val=0x(?P<value>[0-9a-fA-F]+).*?type=lab')
 
 
@@ -27,7 +30,14 @@ def main() -> int:
         if seg:
             size = int(seg.group("size"), 16)
             if size:
-                segments.append((seg.group("name"), int(seg.group("start"), 16), size))
+                segments.append(
+                    (
+                        seg.group("name"),
+                        int(seg.group("start"), 16),
+                        size,
+                        "oname=" in seg.group("attrs"),
+                    )
+                )
             continue
         sym = SYM_RE.match(line)
         if sym:
@@ -35,10 +45,17 @@ def main() -> int:
 
     print("Segment sizes:")
     total = 0
-    for name, start, size in sorted(segments, key=lambda item: item[1]):
+    file_total = 0
+    for name, start, size, file_backed in sorted(segments, key=lambda item: item[1]):
         total += size
+        if file_backed:
+            file_total += size
         print(f"  {name:8} ${start:04x}-${start + size - 1:04x} {size:6} bytes")
-    print(f"  {'TOTAL':8} {'':11} {total:6} bytes")
+    if file_total != total:
+        print(f"  {'FILE':8} {'':11} {file_total:6} bytes")
+        print(f"  {'RUNTIME':8} {'':11} {total:6} bytes")
+    else:
+        print(f"  {'TOTAL':8} {'':11} {total:6} bytes")
 
     code_labels = [(name, value) for name, value in labels if 0x0801 <= value < 0xa000]
     if code_labels:
