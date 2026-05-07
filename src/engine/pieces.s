@@ -79,12 +79,10 @@ __engine_pieces_no_capture_0:
   lda currentplayer
   beq __engine_pieces_update_black_0
 
-  jsr UpdateWhitePiecePosition
-  rts
+  jmp UpdateWhitePiecePosition
 
 __engine_pieces_update_black_0:
-  jsr UpdateBlackPiecePosition
-  rts
+  jmp UpdateBlackPiecePosition
 
 RemoveFromWhitePieceList:
   lda movetoindex

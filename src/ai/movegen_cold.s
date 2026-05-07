@@ -29,8 +29,7 @@ AddPawnPromotionMoves:
   ora #PROMO_FLAG_KNIGHT
   tax
   lda $f7
-  jsr AddMove
-  rts
+  jmp AddMove
 
 AddQuietPromotionMovesFront:
   lda MoveCount

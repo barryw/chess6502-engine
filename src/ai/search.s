@@ -712,8 +712,7 @@ __ai_search_black_attacks_0:
   lda #BLACKS_TURN; Black is attacking (SearchSide = black)
 __ai_search_call_attack_0:
   sta attack_color
-  jsr IsSquareAttacked
-  rts
+  jmp IsSquareAttacked
 
 ;
 ; IsCurrentSideInCheck
@@ -729,16 +728,14 @@ IsCurrentSideInCheck:
   sta attack_sq
   lda #WHITES_TURN
   sta attack_color
-  jsr IsSquareAttacked
-  rts
+  jmp IsSquareAttacked
 
 __ai_search_check_white_king_1:
   lda whitekingsq
   sta attack_sq
   lda #BLACKS_TURN
   sta attack_color
-  jsr IsSquareAttacked
-  rts
+  jmp IsSquareAttacked
 
 ;
 ; IsCastlingMove
@@ -2170,8 +2167,7 @@ Quiesce:
   bcc __ai_search_quiesce_continue_0
 ; Depth limit reached - just evaluate
   dec QuiesceDepth
-  jsr Evaluate
-  rts
+  jmp Evaluate
 
 __ai_search_quiesce_continue_0:
 ; Stand pat: evaluate current position
@@ -2490,8 +2486,7 @@ __ai_search_score_done_0:
   tax
   lda NegamaxState + 5, x
   ldx TTFlag
-  jsr TTStore
-  rts
+  jmp TTStore
 
 ;
 ; ApplyRootPawnSafetyPenalty
@@ -2933,8 +2928,7 @@ ApplyRootHistoryPenalty:
   bcc __ai_search_history_seen_once_0
 
   lda #ROOT_REPETITION_PENALTY
-  jsr ApplyRootPenaltyAmount
-  rts
+  jmp ApplyRootPenaltyAmount
 
 __ai_search_history_seen_once_0:
   lda #ROOT_HISTORY_SEEN_PENALTY

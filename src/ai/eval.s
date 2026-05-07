@@ -352,11 +352,9 @@ __ai_eval_pawn_structure_done_0:
 ; active kings matter instead.
   lda EvalEndgameFlag
   beq __ai_eval_eval_middlegame_king_0
-  jsr EvaluateEndgame
-  rts
+  jmp EvaluateEndgame
 __ai_eval_eval_middlegame_king_0:
-  jsr EvaluateKingSafety
-  rts
+  jmp EvaluateKingSafety
 
 ;
 ; PstWhitePiece - Add PST value for white piece
@@ -444,8 +442,7 @@ EvaluatePawnPressure:
   beq __ai_eval_black_attacked_0
   ldy $f2
   lda PawnAttackPenalty, y
-  jsr SubtractEvalUnsigned
-  rts
+  jmp SubtractEvalUnsigned
 
 __ai_eval_black_attacked_0:
   ldy $f2
@@ -471,8 +468,7 @@ EvaluateQueenPressure:
   beq __ai_eval_black_attacked_1
   ldy $f2
   lda QueenAttackPenalty, y
-  jsr SubtractEvalUnsigned
-  rts
+  jmp SubtractEvalUnsigned
 
 __ai_eval_black_attacked_1:
   ldy $f2
@@ -501,8 +497,7 @@ EvaluateMinorPressure:
   lda $f1
   beq __ai_eval_black_attacked_2
   lda #KNIGHT_ATTACK_QUEEN_PENALTY
-  jsr SubtractEvalUnsigned
-  rts
+  jmp SubtractEvalUnsigned
 
 __ai_eval_black_attacked_2:
   lda #KNIGHT_ATTACK_QUEEN_PENALTY
@@ -564,11 +559,10 @@ ApplyMobilityScore:
   beq __ai_eval_done_4
   ldx $f1
   beq __ai_eval_black_piece_0
-  jsr AddEvalUnsigned
-  rts
+  jmp AddEvalUnsigned
 
 __ai_eval_black_piece_0:
-  jsr SubtractEvalUnsigned
+  jmp SubtractEvalUnsigned
 
 __ai_eval_done_4:
   rts

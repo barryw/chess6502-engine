@@ -22,8 +22,7 @@ __engine_attack_docheck_0:
   lda currentplayer
   eor #$01
   sta attack_color
-  jsr IsSquareAttacked
-  rts
+  jmp IsSquareAttacked
 
 IsSquareAttacked:
 

@@ -98,8 +98,7 @@ TTBeginSearch:
   bne __ai_tt_generation_ok_0
 
 ; Generation 0 is reserved for cleared/unused entries.
-  jsr TTClear
-  rts
+  jmp TTClear
 
 __ai_tt_generation_ok_0:
   lda #$00

@@ -378,8 +378,7 @@ __ai_movegen_black_queenside_0:
 ; Add black queenside castle: e8 ($04) -> c8 ($02)
   lda #$04
   ldx #$02
-  jsr AddMove
-  rts
+  jmp AddMove
 
 __ai_movegen_white_castle_0:
 ; White castling - king must be on e1 ($74)
@@ -620,8 +619,7 @@ __ai_movegen_normal_pawn_move_0:
 ; Not a promotion - add regular move
   lda $f7; A = from
   ldx $fa; X = to
-  jsr AddMove
-  rts
+  jmp AddMove
 
 ;
 ; Generate all pseudo-legal moves for a side
