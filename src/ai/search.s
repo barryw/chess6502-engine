@@ -3077,13 +3077,14 @@ __ai_search_done_5:
   rts
 
 ;
-; ApplyRootLooseRookPenalty
-; Penalize root moves that ignore an undefended rook under non-pawn attack.
-; Defended rooks and moves that move/block/capture the attacker are exempt.
+; ApplyRootLoosePiecePenalty
+; Penalize root moves that ignore an undefended minor or rook under non-pawn
+; attack. Defended pieces and moves that move/block/capture the attacker are
+; exempt.
 ; Input/Output: $eb = root move score from the mover's perspective.
 ; Clobbers: A, X, Y, attack_sq, attack_color, $f0-$f7
 ;
-ApplyRootLooseRookPenalty:
+ApplyRootLoosePiecePenalty:
   lda NegamaxState + 4
   bmi __ai_search_loose_rook_skip_0
   and #$7f
@@ -3120,8 +3121,10 @@ __ai_search_rook_scan_loop_1:
   sta $f1
   lda $f3
   and #$07
-  cmp #ROOK_TYPE
-  bne __ai_search_rook_next_square_1
+  cmp #KNIGHT_TYPE
+  bcc __ai_search_rook_next_square_1
+  cmp #QUEEN_TYPE
+  bcs __ai_search_rook_next_square_1
 
   stx $f0
   jsr IsPiecePawnAttacked
@@ -4074,7 +4077,7 @@ __ai_search_pvs_research_done_0:
   bne __ai_search_skip_root_pawn_safety_0
   jsr ApplyRootPawnSafetyPenalty
   jsr ApplyRootHangingMinorPenalty
-  jsr ApplyRootLooseRookPenalty
+  jsr ApplyRootLoosePiecePenalty
   jsr ApplyRootMissedPawnWinPenalty
   jsr ApplyRootMissedAdvancedPawnPenalty
   jsr ApplyRootMinorSafetyPenalty
