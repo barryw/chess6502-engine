@@ -103,10 +103,10 @@ ROOT_REVERSE_MOVE_PENALTY = 45
 ROOT_HISTORY_SEEN_PENALTY = 35
 ROOT_REPETITION_PENALTY = 85
 FUTILITY_MARGIN = 30
-LMR_MIN_DEPTH = 4
-LMR_FULL_MOVES = 2
+LMR_MIN_DEPTH = 2
+LMR_FULL_MOVES = 1
 ASPIRATION_DELTA = 20
-PVS_MIN_DEPTH = 3
+PVS_MIN_DEPTH = 4
 NULL_MOVE_MIN_DEPTH = 4
 NULL_MOVE_REDUCTION = 3
 NULL_MOVE_MIN_PIECES = 8
@@ -3742,6 +3742,10 @@ __ai_search_search_current_move_0:
   lda NegamaxState + 5, x
   cmp #LMR_MIN_DEPTH
   bcc __ai_search_lmr_done_0
+  bne __ai_search_lmr_not_depth2_0
+  lda SearchDepth
+  beq __ai_search_lmr_done_0
+__ai_search_lmr_not_depth2_0:
   lda NegamaxState + 2, x
   cmp #LMR_FULL_MOVES
   bcc __ai_search_lmr_done_0

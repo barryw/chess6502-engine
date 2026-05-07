@@ -47,7 +47,7 @@ suites {
       assert(peekbyte([SearchAspirationActive]) == $00, "Depth-one search should not use aspiration")
     }
 
-    test("negamax-uses-pvs-on-later-deep-moves", "Depth-three search probes later moves with PVS") {
+    test("negamax-uses-pvs-on-later-deep-moves", "Depth-four search probes later moves with PVS") {
       jsr([InitZobristTables], stop_on_rts = true, fail_on_brk = true)
       jsr([TTClear], stop_on_rts = true, fail_on_brk = true)
 
@@ -61,11 +61,11 @@ suites {
 
       $e8 = $80
       $e9 = $7f
-      a = $03
+      a = $04
       jsr([Negamax], stop_on_rts = true, fail_on_brk = true)
 
       assert(peekbyte([SearchDepth]) == $00, "Negamax should restore SearchDepth")
-      assert(peekbyte([SearchPVSSearches]) > $00, "Depth-three search should use PVS probes")
+      assert(peekbyte([SearchPVSSearches]) > $00, "Depth-four search should use PVS probes")
     }
 
     test("history-rewards-quiet-cutoff", "Quiet beta cutoffs update compact history ordering") {
