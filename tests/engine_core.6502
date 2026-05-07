@@ -111,6 +111,46 @@ suites {
       assert(peekbyte([MoveListTo]) == $44, "Promoted history move should keep its destination")
     }
 
+    test("ordering-promotes-forcing-quiets", "Move ordering searches quiet checks and promotions before ordinary quiet moves") {
+      jsr([ClearKillers], stop_on_rts = true, fail_on_brk = true)
+      jsr([ClearHistory], stop_on_rts = true, fail_on_brk = true)
+
+      memfill([Board88], 128, $30)
+      [Board88] + $70 = $b6
+      [Board88] + $77 = $b4
+      [Board88] + $04 = $36
+      [whitekingsq] = $70
+      [blackkingsq] = $04
+      [MoveCount] = $02
+      [MoveListFrom] + $00 = $77
+      [MoveListTo] + $00 = $67
+      [MoveListFrom] + $01 = $77
+      [MoveListTo] + $01 = $74
+
+      jsr([OrderMovesMVVLVA], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([MoveListFrom]) == $77, "Quiet checking rook move should be promoted")
+      assert(peekbyte([MoveListTo]) == $74, "Quiet checking move should move to the front")
+
+      memfill([Board88], 128, $30)
+      [Board88] + $70 = $b6
+      [Board88] + $77 = $b4
+      [Board88] + $14 = $b1
+      [Board88] + $00 = $36
+      [whitekingsq] = $70
+      [blackkingsq] = $00
+      [MoveCount] = $02
+      [MoveListFrom] + $00 = $77
+      [MoveListTo] + $00 = $67
+      [MoveListFrom] + $01 = $14
+      [MoveListTo] + $01 = $04
+
+      jsr([OrderMovesMVVLVA], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([MoveListFrom]) == $14, "Quiet promotion should be promoted before ordinary quiets")
+      assert(peekbyte([MoveListTo]) == $04, "Quiet promotion destination should move to the front")
+    }
+
     test("eval-rewards-bishop-pair", "Evaluation counts bishops and applies the bishop-pair bonus") {
       [EvalScore] = $00
       [EvalScore] + $01 = $00

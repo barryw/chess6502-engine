@@ -893,13 +893,19 @@ __ai_movegen_check_swapped_0:
   bne __ai_movegen_outer_sort_0; If swapped, do another pass
 
 __ai_movegen_mvvlva_done_0:
-; After captures are sorted, try to move killer moves to front of quiet moves
-; $e0 = number of captures (quiet moves start here)
+; After captures are sorted, move forcing quiet moves to the front of the quiet
+; band: promotions first, then quiet checks. Killer/history ordering handles
+; the remaining quiet moves after these threats.
   lda $e0
   sta $e6; $e6 = start of quiet moves
+  lda SearchDepth
+  cmp #$02
+  bcs __ai_movegen_skip_forcing_quiets_0
+  jsr PromoteForcingQuietMoves
+__ai_movegen_skip_forcing_quiets_0:
 
 ; Check each quiet move against killers
-  lda $e0
+  lda $e6
   sta $e1; $e1 = current index
 
 __ai_movegen_killer_reorder_loop_0:
@@ -1027,6 +1033,189 @@ __ai_movegen_history_do_swap_0:
   sta MoveListTo, x
   pla
   sta MoveListTo, y
+  rts
+
+;
+; PromoteForcingQuietMoves
+; Within the quiet move band, move promotions and checks before ordinary
+; quiets so alpha-beta sees forcing moves before positional shuffling.
+; Input/Output: $e6 = first non-forcing quiet index.
+; Clobbers: A, X, Y, $e1-$e5, $f0-$f5, attack_sq, attack_color
+;
+PromoteForcingQuietMoves:
+  lda $e6
+  sta $e1; scan index
+
+__ai_movegen_forcing_scan_loop_0:
+  lda $e1
+  cmp MoveCount
+  bcc __ai_movegen_forcing_check_0
+  rts
+
+__ai_movegen_forcing_check_0:
+  ldx $e1
+  jsr IsQuietPromotionMove
+  bcs __ai_movegen_promote_forcing_0
+
+  ldx $e1
+  jsr IsQuietMoveChecking
+  bcc __ai_movegen_forcing_next_0
+
+__ai_movegen_promote_forcing_0:
+  ldx $e1
+  ldy $e6
+  cpx $e6
+  beq __ai_movegen_forcing_advance_0
+
+  lda MoveListFrom, x
+  pha
+  lda MoveListFrom, y
+  sta MoveListFrom, x
+  pla
+  sta MoveListFrom, y
+
+  lda MoveListTo, x
+  pha
+  lda MoveListTo, y
+  sta MoveListTo, x
+  pla
+  sta MoveListTo, y
+
+__ai_movegen_forcing_advance_0:
+  inc $e6
+
+__ai_movegen_forcing_next_0:
+  inc $e1
+  jmp __ai_movegen_forcing_scan_loop_0
+
+;
+; IsQuietPromotionMove
+; Input: X = move index. Output: carry set if this quiet move promotes.
+; Clobbers: A, X, Y, $f0-$f3
+;
+IsQuietPromotionMove:
+  lda MoveListTo, x
+  and #$7f
+  sta $f0
+  tay
+  lda Board88, y
+  cmp #EMPTY_PIECE
+  bne __ai_movegen_not_quiet_promotion_0
+
+  lda MoveListFrom, x
+  tay
+  lda Board88, y
+  cmp #EMPTY_PIECE
+  beq __ai_movegen_not_quiet_promotion_0
+  sta $f1
+  and #$07
+  cmp #PAWN_TYPE
+  bne __ai_movegen_not_quiet_promotion_0
+
+  lda $f1
+  and #WHITE_COLOR
+  beq __ai_movegen_black_promotion_check_0
+
+  lda $f0
+  and #$70
+  cmp #WHITE_PROMO_ROW
+  beq __ai_movegen_is_quiet_promotion_0
+  clc
+  rts
+
+__ai_movegen_black_promotion_check_0:
+  lda $f0
+  and #$70
+  cmp #BLACK_PROMO_ROW
+  beq __ai_movegen_is_quiet_promotion_0
+
+__ai_movegen_not_quiet_promotion_0:
+  clc
+  rts
+
+__ai_movegen_is_quiet_promotion_0:
+  sec
+  rts
+
+;
+; IsQuietMoveChecking
+; Input: X = move index. Output: carry set if the quiet move gives check.
+; Clobbers: A, X, Y, $f0-$f5, attack_sq, attack_color
+;
+IsQuietMoveChecking:
+  lda MoveListTo, x
+  bmi __ai_movegen_not_checking_quiet_0
+  and #$7f
+  sta $f1; destination
+  tay
+  lda Board88, y
+  cmp #EMPTY_PIECE
+  bne __ai_movegen_not_checking_quiet_0
+
+  lda MoveListFrom, x
+  sta $f0; source
+  tay
+  lda Board88, y
+  cmp #EMPTY_PIECE
+  beq __ai_movegen_not_checking_quiet_0
+  sta $f2; moving piece
+  and #WHITE_COLOR
+  sta $f4; moving color
+
+; Skip castling here; the temporary move below does not move the rook.
+  lda $f2
+  and #$07
+  cmp #KING_TYPE
+  bne __ai_movegen_temp_check_move_0
+  lda $f1
+  sec
+  sbc $f0
+  cmp #$02
+  beq __ai_movegen_not_checking_quiet_0
+  cmp #$fe
+  beq __ai_movegen_not_checking_quiet_0
+
+__ai_movegen_temp_check_move_0:
+  ldx $f0
+  lda #EMPTY_PIECE
+  sta Board88, x
+  ldx $f1
+  lda $f2
+  sta Board88, x
+
+  lda $f4
+  beq __ai_movegen_black_checking_move_0
+  lda blackkingsq
+  sta attack_sq
+  lda #WHITES_TURN
+  jmp __ai_movegen_checking_attack_ready_0
+
+__ai_movegen_black_checking_move_0:
+  lda whitekingsq
+  sta attack_sq
+  lda #BLACKS_TURN
+
+__ai_movegen_checking_attack_ready_0:
+  sta attack_color
+  jsr IsSquareAttacked
+  lda #$00
+  rol
+  sta $f5; 1 if checking
+
+  ldx $f0
+  lda $f2
+  sta Board88, x
+  ldx $f1
+  lda #EMPTY_PIECE
+  sta Board88, x
+
+  lda $f5
+  beq __ai_movegen_not_checking_quiet_0
+  sec
+  rts
+
+__ai_movegen_not_checking_quiet_0:
+  clc
   rts
 
 ;
