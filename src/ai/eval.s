@@ -57,6 +57,7 @@ ENDGAME_ROOK_KING_CUTOFF_BONUS = 25
 CASTLED_BONUS = 30; Bonus for being on castled squares
 PAWN_SHIELD_BONUS = 10; Bonus per pawn in shield
 OPEN_FILE_PENALTY = 25; Penalty for open file near king
+SEMI_OPEN_FILE_PENALTY = 12; Penalty for half-open file near king
 KING_CENTER_PENALTY = 30; Penalty for king in center in middlegame
 
 ; Passed pawn bonus by rank (row 0 = rank 8, row 7 = rank 1)
@@ -1978,6 +1979,7 @@ __ai_eval_white_center_penalty_0:
   sta $f1
 
 __ai_eval_white_done_0:
+  jsr ApplyWhiteKingFileExposure
   lda $f1; Return safety score
   rts
 
@@ -2108,5 +2110,93 @@ __ai_eval_black_center_penalty_0:
   sta $f1
 
 __ai_eval_black_done_0:
+  jsr ApplyBlackKingFileExposure
   lda $f1; Return safety score
+  rts
+
+;
+; ApplyWhiteKingFileExposure / ApplyBlackKingFileExposure
+; Penalize missing friendly pawns on files adjacent to the king. A fully open
+; file near the king is worse than a semi-open file with an enemy pawn still
+; present. Pawn file counts are valid only when EvalPawnCount is nonzero.
+; Inputs: $f1=safety score, $f2=king file.
+; Clobbers: A, Y, $f4
+;
+ApplyWhiteKingFileExposure:
+  lda EvalPawnCount
+  beq __ai_eval_white_exposure_done_0
+
+  lda $f2
+  beq __ai_eval_white_exposure_file_0
+  sec
+  sbc #$01
+  jsr PenalizeWhiteKingFile
+
+__ai_eval_white_exposure_file_0:
+  lda $f2
+  jsr PenalizeWhiteKingFile
+
+  lda $f2
+  cmp #$07
+  beq __ai_eval_white_exposure_done_0
+  clc
+  adc #$01
+  jsr PenalizeWhiteKingFile
+
+__ai_eval_white_exposure_done_0:
+  rts
+
+ApplyBlackKingFileExposure:
+  lda EvalPawnCount
+  beq __ai_eval_black_exposure_done_0
+
+  lda $f2
+  beq __ai_eval_black_exposure_file_0
+  sec
+  sbc #$01
+  jsr PenalizeBlackKingFile
+
+__ai_eval_black_exposure_file_0:
+  lda $f2
+  jsr PenalizeBlackKingFile
+
+  lda $f2
+  cmp #$07
+  beq __ai_eval_black_exposure_done_0
+  clc
+  adc #$01
+  jsr PenalizeBlackKingFile
+
+__ai_eval_black_exposure_done_0:
+  rts
+
+PenalizeWhiteKingFile:
+  tay
+  lda WhitePawnsPerFile, y
+  bne __ai_eval_king_file_done_0
+  lda BlackPawnsPerFile, y
+  bne __ai_eval_king_file_semi_open_0
+  lda #OPEN_FILE_PENALTY
+  jmp SubtractKingSafety
+
+PenalizeBlackKingFile:
+  tay
+  lda BlackPawnsPerFile, y
+  bne __ai_eval_king_file_done_0
+  lda WhitePawnsPerFile, y
+  bne __ai_eval_king_file_semi_open_0
+  lda #OPEN_FILE_PENALTY
+  jmp SubtractKingSafety
+
+__ai_eval_king_file_semi_open_0:
+  lda #SEMI_OPEN_FILE_PENALTY
+
+SubtractKingSafety:
+  sta $f4
+  sec
+  lda $f1
+  sbc $f4
+  sta $f1
+
+__ai_eval_king_file_done_0:
   rts

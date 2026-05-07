@@ -243,6 +243,66 @@ suites {
       assert(peekbyte([EvalScore]) == $00, "Rim knights should not get the outpost bonus")
     }
 
+    test("eval-penalizes-open-king-files", "King safety penalizes open and semi-open files around the king") {
+      memfill([WhitePawnsPerFile], 8, $00)
+      memfill([BlackPawnsPerFile], 8, $00)
+      [EvalPawnCount] = $01
+      [WhitePawnsPerFile] + $05 = $01
+      [WhitePawnsPerFile] + $07 = $01
+      $f1 = $00
+      $f2 = $06
+
+      jsr([ApplyWhiteKingFileExposure], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($f1) == $e7, "Open file beside a white king should subtract the full exposure penalty")
+
+      memfill([WhitePawnsPerFile], 8, $00)
+      memfill([BlackPawnsPerFile], 8, $00)
+      [EvalPawnCount] = $01
+      [WhitePawnsPerFile] + $05 = $01
+      [WhitePawnsPerFile] + $07 = $01
+      [BlackPawnsPerFile] + $06 = $01
+      $f1 = $00
+      $f2 = $06
+
+      jsr([ApplyWhiteKingFileExposure], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($f1) == $f4, "Semi-open file beside a white king should subtract the smaller penalty")
+
+      memfill([WhitePawnsPerFile], 8, $00)
+      memfill([BlackPawnsPerFile], 8, $00)
+      [EvalPawnCount] = $01
+      [WhitePawnsPerFile] + $05 = $01
+      [WhitePawnsPerFile] + $06 = $01
+      [WhitePawnsPerFile] + $07 = $01
+      $f1 = $00
+      $f2 = $06
+
+      jsr([ApplyWhiteKingFileExposure], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($f1) == $00, "Friendly pawns on nearby files should prevent white king exposure penalties")
+
+      memfill([WhitePawnsPerFile], 8, $00)
+      memfill([BlackPawnsPerFile], 8, $00)
+      [EvalPawnCount] = $01
+      [BlackPawnsPerFile] = $01
+      [BlackPawnsPerFile] + $02 = $01
+      $f1 = $00
+      $f2 = $01
+
+      jsr([ApplyBlackKingFileExposure], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($f1) == $e7, "Open file beside a black king should subtract the full exposure penalty")
+
+      [EvalPawnCount] = $00
+      $f1 = $00
+      $f2 = $01
+
+      jsr([ApplyBlackKingFileExposure], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($f1) == $00, "King exposure should skip when pawn counts are unavailable")
+    }
+
     test("root-early-major-penalties-track-development", "Early queen and rook penalties require undeveloped home minors") {
       memfill([Board88], 128, $30)
       [Board88] + $74 = $b6
