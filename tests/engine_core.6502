@@ -27,6 +27,47 @@ suites {
       assert(peekbyte([MoveCount]) == $08, "MoveCount should match API return")
     }
 
+    test("search-aspiration-window-bounds", "Aspiration setup derives a bounded window from prior iteration score") {
+      [IterDepth] = $02
+      [IterScore] = $0a
+      [SearchAspirationAttempts] = $00
+
+      jsr([SetupAspirationWindow], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($e8) == $f6, "Aspiration alpha should be previous score minus window")
+      assert(peekbyte($e9) == $1e, "Aspiration beta should be previous score plus window")
+      assert(peekbyte([SearchAspirationAttempts]) == $01, "Aspiration attempt counter should increment")
+      assert(peekbyte([SearchAspirationActive]) == $01, "Aspiration should be marked active")
+
+      [IterDepth] = $01
+      jsr([SetupAspirationWindow], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte($e8) == $80, "Depth-one search should use full alpha")
+      assert(peekbyte($e9) == $7f, "Depth-one search should use full beta")
+      assert(peekbyte([SearchAspirationActive]) == $00, "Depth-one search should not use aspiration")
+    }
+
+    test("negamax-uses-pvs-on-later-deep-moves", "Depth-three search probes later moves with PVS") {
+      jsr([InitZobristTables], stop_on_rts = true, fail_on_brk = true)
+      jsr([TTClear], stop_on_rts = true, fail_on_brk = true)
+
+      [SearchDepth] = $00
+      [SearchSide] = $80
+      [SearchPVSSearches] = $00
+      [SearchPVSResearches] = $00
+
+      [Board88] + $44 = $b6
+      [Board88] + $00 = $36
+
+      $e8 = $80
+      $e9 = $7f
+      a = $03
+      jsr([Negamax], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([SearchDepth]) == $00, "Negamax should restore SearchDepth")
+      assert(peekbyte([SearchPVSSearches]) > $00, "Depth-three search should use PVS probes")
+    }
+
     test("headless-engine-finds-promotion", "ChessFindBestMove handles a headless promotion shortcut", timeout = 13000000) {
       jsr([InitZobristTables], stop_on_rts = true, fail_on_brk = true)
       jsr([TTClear], stop_on_rts = true, fail_on_brk = true)
@@ -94,6 +135,7 @@ suites {
       assert(peekbyte([SearchCompletedDepth]) > $00, "Headless search should report completed depth")
       assert(peekbyte([SearchRootMoveCount]) > $00, "Headless search should report root moves")
       assert(peekbyte([SearchUsedBook]) == $00, "Headless test platform should not use a book")
+      assert(peekbyte([SearchAspirationAttempts]) > $00, "Iterative deepening should use aspiration after depth one")
     }
   }
 }

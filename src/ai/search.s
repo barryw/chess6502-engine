@@ -105,6 +105,8 @@ ROOT_REPETITION_PENALTY = 85
 FUTILITY_MARGIN = 30
 LMR_MIN_DEPTH = 4
 LMR_FULL_MOVES = 4
+ASPIRATION_DELTA = 20
+PVS_MIN_DEPTH = 3
 
 ; Last move returned by FindBestMove. This lets the engine avoid immediately
 ; undoing its own previous quiet move even on hosts that have not wired full
@@ -951,6 +953,10 @@ InitSearch:
   sta SearchCompletedDepth
   sta SearchRootMoveCount
   sta SearchUsedBook
+  sta SearchAspirationAttempts
+  sta SearchAspirationRetries
+  sta SearchPVSSearches
+  sta SearchPVSResearches
   sta LastMoveWasCaptureByDepth
   sta RecaptureExtensionUsedByDepth
   sta NextMoveUsedRecaptureExtension
@@ -1810,6 +1816,14 @@ SearchCompletedDepth:
 SearchRootMoveCount:
   .byte $00
 SearchUsedBook:
+  .byte $00
+SearchAspirationAttempts:
+  .byte $00
+SearchAspirationRetries:
+  .byte $00
+SearchPVSSearches:
+  .byte $00
+SearchPVSResearches:
   .byte $00
 
 ;
@@ -3522,6 +3536,25 @@ __ai_search_lmr_done_0:
 
   jsr TryApplyRecaptureExtension
 
+; Principal Variation Search: search the first ordered move at full width,
+; then try later moves with a null window and re-search only if they improve.
+  ldy SearchDepth
+  lda #$00
+  sta NegamaxPVSUsed, y
+  lda NegamaxState + 5, x
+  cmp #PVS_MIN_DEPTH
+  bcc __ai_search_pvs_full_width_0
+  lda NegamaxState + 2, x
+  beq __ai_search_pvs_full_width_0
+  lda NegamaxState + 6, x
+  cmp #NEG_INFINITY
+  beq __ai_search_pvs_full_width_0
+  lda #$01
+  sta NegamaxPVSUsed, y
+  inc SearchPVSSearches
+
+__ai_search_pvs_full_width_0:
+
 ; Make the move
   lda NegamaxState + 3, x
   ldy NegamaxState + 4, x
@@ -3539,7 +3572,30 @@ __ai_search_lmr_done_0:
   asl; *8
   tax
 
-; Set up alpha/beta for child: child_alpha = -beta, child_beta = -alpha
+; Set up alpha/beta for child. PVS probes later moves with a null window:
+; child_alpha = -(alpha + 1), child_beta = -alpha.
+  lda SearchDepth
+  sec
+  sbc #$01; Parent's depth index
+  tay
+  lda NegamaxPVSUsed, y
+  beq __ai_search_child_full_window_0
+
+  lda NegamaxState + 6, x; alpha
+  clc
+  adc #$01
+  bvc __ai_search_pvs_alpha_plus_one_ok_0
+  lda #$7f
+__ai_search_pvs_alpha_plus_one_ok_0:
+  jsr NegateSearchScore
+  sta $e8; child alpha = -(alpha + 1)
+
+  lda NegamaxState + 6, x; alpha
+  jsr NegateSearchScore
+  sta $e9; child beta = -alpha
+  jmp __ai_search_child_window_ready_0
+
+__ai_search_child_full_window_0:
   lda NegamaxState + 7, x; beta
   jsr NegateSearchScore; -beta
   sta $e8; child alpha = -beta
@@ -3548,6 +3604,7 @@ __ai_search_lmr_done_0:
   jsr NegateSearchScore; -alpha
   sta $e9; child beta = -alpha
 
+__ai_search_child_window_ready_0:
   lda SearchDepth
   sec
   sbc #$01; Parent's depth index
@@ -3574,6 +3631,84 @@ __ai_search_lmr_done_0:
   sty $f0
   ldx $f0
   jsr UnmakeMove
+
+; If a null-window PVS probe improved alpha without failing high, re-search
+; the same move with the full window before scoring/root penalties.
+  lda SearchDepth
+  asl
+  asl
+  asl
+  tax
+  ldy SearchDepth
+  lda NegamaxPVSUsed, y
+  beq __ai_search_pvs_research_done_0
+
+; score > alpha?
+  lda $eb
+  sec
+  sbc NegamaxState + 6, x
+  beq __ai_search_pvs_research_done_0
+  bvc __ai_search_pvs_cmp_alpha_no_ov_0
+  eor #$80
+__ai_search_pvs_cmp_alpha_no_ov_0:
+  bmi __ai_search_pvs_research_done_0
+
+; score < beta?
+  lda $eb
+  sec
+  sbc NegamaxState + 7, x
+  beq __ai_search_pvs_research_done_0
+  bvc __ai_search_pvs_cmp_beta_no_ov_0
+  eor #$80
+__ai_search_pvs_cmp_beta_no_ov_0:
+  bpl __ai_search_pvs_research_done_0
+
+  inc SearchPVSResearches
+
+  lda NegamaxState + 3, x
+  ldy NegamaxState + 4, x
+  sty $f0
+  ldx $f0
+  jsr MakeMove
+
+; Full-window re-search: child_alpha = -beta, child_beta = -alpha.
+  lda SearchDepth
+  sec
+  sbc #$01
+  asl
+  asl
+  asl
+  tax
+  lda NegamaxState + 7, x
+  jsr NegateSearchScore
+  sta $e8
+  lda NegamaxState + 6, x
+  jsr NegateSearchScore
+  sta $e9
+
+  lda SearchDepth
+  sec
+  sbc #$01
+  tay
+  lda NegamaxChildDepth, y
+  jsr Negamax
+  jsr NegateSearchScore
+  sta $eb
+
+  lda SearchDepth
+  sec
+  sbc #$01
+  asl
+  asl
+  asl
+  tax
+  lda NegamaxState + 3, x
+  ldy NegamaxState + 4, x
+  sty $f0
+  ldx $f0
+  jsr UnmakeMove
+
+__ai_search_pvs_research_done_0:
 
   lda SearchDepth
   bne __ai_search_skip_root_pawn_safety_0
@@ -3800,6 +3935,8 @@ NegamaxBestTo:
 NegamaxFutility:
   .res MAX_DEPTH, $00
 NegamaxChildDepth:
+  .res MAX_DEPTH, $00
+NegamaxPVSUsed:
   .res MAX_DEPTH, $00
 
 ;
@@ -5633,6 +5770,90 @@ SetOpeningSurvivalMove:
   rts
 
 ;
+; SetupAspirationWindow
+; Use the previous iterative-deepening score to search a narrow window after
+; depth 1. A failed window is re-searched at full width by FindBestMove.
+; Output: $e8 = alpha, $e9 = beta, AspirationAlpha/Beta mirror the window.
+;
+SetupAspirationWindow:
+  lda IterDepth
+  cmp #$02
+  bcs __ai_search_use_aspiration_0
+
+SetupFullSearchWindow:
+  lda #$00
+  sta SearchAspirationActive
+  lda #NEG_INFINITY
+  sta $e8
+  sta AspirationAlpha
+  lda #$7f
+  sta $e9
+  sta AspirationBeta
+  rts
+
+__ai_search_use_aspiration_0:
+  inc SearchAspirationAttempts
+  lda #$01
+  sta SearchAspirationActive
+
+  lda IterScore
+  sec
+  sbc #ASPIRATION_DELTA
+  bvc __ai_search_asp_alpha_ok_0
+  lda #NEG_INFINITY
+__ai_search_asp_alpha_ok_0:
+  sta $e8
+  sta AspirationAlpha
+
+  lda IterScore
+  clc
+  adc #ASPIRATION_DELTA
+  bvc __ai_search_asp_beta_ok_0
+  lda #$7f
+__ai_search_asp_beta_ok_0:
+  sta $e9
+  sta AspirationBeta
+  rts
+
+;
+; CheckAspirationFailure
+; Output: carry set if IterScore is outside or on the aspiration bounds.
+;
+CheckAspirationFailure:
+  lda SearchAspirationActive
+  bne __ai_search_check_aspiration_0
+  clc
+  rts
+
+__ai_search_check_aspiration_0:
+; Fail low when score <= alpha.
+  lda IterScore
+  sec
+  sbc AspirationAlpha
+  beq __ai_search_aspiration_failed_0
+  bvc __ai_search_asp_low_no_ov_0
+  eor #$80
+__ai_search_asp_low_no_ov_0:
+  bmi __ai_search_aspiration_failed_0
+
+; Fail high when score >= beta.
+  lda IterScore
+  sec
+  sbc AspirationBeta
+  bvc __ai_search_asp_high_no_ov_0
+  eor #$80
+__ai_search_asp_high_no_ov_0:
+  bmi __ai_search_aspiration_ok_0
+
+__ai_search_aspiration_failed_0:
+  sec
+  rts
+
+__ai_search_aspiration_ok_0:
+  clc
+  rts
+
+;
 ; FindBestMove
 ; Main entry point for AI to find best move
 ; Uses time-based iterative deepening
@@ -5783,15 +6004,24 @@ __ai_search_time_iter_loop_0:
   bcs __ai_search_time_done_0; Time's up, use best move found
 
 ; Set up alpha/beta window
-  lda #NEG_INFINITY
-  sta $e8
-  lda #$7F
-  sta $e9
+  jsr SetupAspirationWindow
 
 ; Search at current depth
   lda IterDepth
   jsr Negamax
   sta IterScore
+
+  jsr CheckAspirationFailure
+  bcc __ai_search_iteration_score_ready_0
+
+; Aspiration failed. Keep the TT bounds, widen fully, and re-search once.
+  inc SearchAspirationRetries
+  jsr SetupFullSearchWindow
+  lda IterDepth
+  jsr Negamax
+  sta IterScore
+
+__ai_search_iteration_score_ready_0:
   lda IterDepth
   sta SearchCompletedDepth
 
@@ -5861,4 +6091,10 @@ IterDepth:
 MaxSearchDepth:
   .byte $00
 IterScore:
+  .byte $00
+AspirationAlpha:
+  .byte NEG_INFINITY
+AspirationBeta:
+  .byte $7f
+SearchAspirationActive:
   .byte $00
