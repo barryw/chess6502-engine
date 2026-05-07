@@ -303,6 +303,53 @@ suites {
       assert(peekbyte($f1) == $00, "King exposure should skip when pawn counts are unavailable")
     }
 
+    test("eval-penalizes-pinned-pieces", "King-ray pins make trapped defenders tactical targets") {
+      memfill([Board88], 128, $30)
+      [Board88] + $74 = $b6
+      [Board88] + $64 = $b2
+      [Board88] + $04 = $34
+      [Board88] + $00 = $36
+      [whitekingsq] = $74
+      [blackkingsq] = $00
+      [EvalScore] = $00
+      [EvalScore] + $01 = $00
+
+      jsr([EvaluateKingPins], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([EvalScore]) == $e7, "White knight pinned to its king by a rook should be penalized")
+      assert(peekbyte([EvalScore] + $01) == $ff, "White pin penalty should keep score negative")
+
+      memfill([Board88], 128, $30)
+      [Board88] + $70 = $b6
+      [Board88] + $74 = $b4
+      [Board88] + $04 = $36
+      [Board88] + $14 = $33
+      [whitekingsq] = $70
+      [blackkingsq] = $04
+      [EvalScore] = $00
+      [EvalScore] + $01 = $00
+
+      jsr([EvaluateKingPins], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([EvalScore]) == $19, "Black bishop pinned to its king by a rook should help white")
+      assert(peekbyte([EvalScore] + $01) == $00, "Black pin penalty should keep score positive")
+
+      memfill([Board88], 128, $30)
+      [Board88] + $74 = $b6
+      [Board88] + $64 = $b2
+      [Board88] + $04 = $33
+      [Board88] + $00 = $36
+      [whitekingsq] = $74
+      [blackkingsq] = $00
+      [EvalScore] = $00
+      [EvalScore] + $01 = $00
+
+      jsr([EvaluateKingPins], stop_on_rts = true, fail_on_brk = true)
+
+      assert(peekbyte([EvalScore]) == $00, "A bishop on the same file should not create an orthogonal pin")
+      assert(peekbyte([EvalScore] + $01) == $00, "Non-pin score should stay neutral")
+    }
+
     test("root-early-major-penalties-track-development", "Early queen and rook penalties require undeveloped home minors") {
       memfill([Board88], 128, $30)
       [Board88] + $74 = $b6

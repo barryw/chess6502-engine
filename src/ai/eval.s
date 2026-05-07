@@ -35,6 +35,10 @@ PAWN_ATTACK_QUEEN_PENALTY = 85
 QUEEN_ATTACK_MINOR_PENALTY = 75
 KNIGHT_ATTACK_QUEEN_PENALTY = 35
 KNIGHT_OUTPOST_BONUS = 25
+PINNED_PAWN_PENALTY = 12
+PINNED_MINOR_PENALTY = 25
+PINNED_ROOK_PENALTY = 35
+PINNED_QUEEN_PENALTY = 45
 
 ;
 ; Pawn Structure Evaluation Constants
@@ -96,6 +100,19 @@ QueenAttackPenalty:
   .byte 0; 4: rook
   .byte 0; 5: queen
   .byte 0; 6: king
+
+PinnedPiecePenalty:
+  .byte 0; 0: empty/invalid
+  .byte PINNED_PAWN_PENALTY; 1: pawn
+  .byte PINNED_MINOR_PENALTY; 2: knight
+  .byte PINNED_MINOR_PENALTY; 3: bishop
+  .byte PINNED_ROOK_PENALTY; 4: rook
+  .byte PINNED_QUEEN_PENALTY; 5: queen
+  .byte 0; 6: king
+
+PinSliderTypes:
+  .byte BISHOP_TYPE, ROOK_TYPE, BISHOP_TYPE, ROOK_TYPE
+  .byte ROOK_TYPE, BISHOP_TYPE, ROOK_TYPE, BISHOP_TYPE
 
 ;
 ; Evaluation result (16-bit signed)
@@ -378,6 +395,7 @@ __ai_eval_pawn_structure_done_0:
   beq __ai_eval_eval_middlegame_king_0
   jmp EvaluateEndgame
 __ai_eval_eval_middlegame_king_0:
+  jsr EvaluateKingPins
   jmp EvaluateKingSafety
 
 ;
@@ -1040,6 +1058,106 @@ SubtractEvalUnsigned:
   lda EvalScore + 1
   sbc #$00
   sta EvalScore + 1
+  rts
+
+;
+; EvaluateKingPins
+; Penalize pieces pinned to their king by enemy bishops, rooks, or queens.
+; A pinned defender is a tactical hostage: it cannot move freely and often
+; becomes the lever for a winning attack.
+; Clobbers: A, X, Y, $f0-$f6
+;
+EvaluateKingPins:
+  lda whitekingsq
+  ldx #WHITE_COLOR
+  jsr EvaluatePinsFromKing
+
+  lda blackkingsq
+  ldx #BLACK_COLOR
+  jmp EvaluatePinsFromKing
+
+;
+; EvaluatePinsFromKing
+; Input: A=king square, X=king color. Adds score against pinned side.
+; Clobbers: A, X, Y, $f0-$f6
+;
+EvaluatePinsFromKing:
+  sta $f0; $f0 = king square
+  stx $f1; $f1 = pinned side color
+  lda #$00
+  sta $f2; $f2 = direction index
+
+__ai_eval_pin_dir_loop_0:
+  ldy $f2
+  lda AllDirectionOffsets, y
+  sta $f3; $f3 = ray delta
+  lda $f0
+  sta $f4; $f4 = current ray square
+  lda #$00
+  sta $f5; $f5 = candidate pinned piece type
+
+__ai_eval_pin_ray_loop_0:
+  lda $f4
+  clc
+  adc $f3
+  sta $f4
+  and #OFFBOARD_MASK
+  bne __ai_eval_pin_next_dir_0
+
+  ldx $f4
+  lda Board88, x
+  cmp #EMPTY_PIECE
+  beq __ai_eval_pin_ray_loop_0
+
+  lda $f5
+  bne __ai_eval_pin_have_candidate_0
+
+; First occupied square must be a friendly non-king piece.
+  lda Board88, x
+  and #WHITE_COLOR
+  cmp $f1
+  bne __ai_eval_pin_next_dir_0
+  lda Board88, x
+  and #$07
+  cmp #KING_TYPE
+  beq __ai_eval_pin_next_dir_0
+  sta $f5
+  jmp __ai_eval_pin_ray_loop_0
+
+__ai_eval_pin_have_candidate_0:
+; The next occupied square must be an enemy slider aligned with the ray.
+  lda Board88, x
+  and #WHITE_COLOR
+  cmp $f1
+  beq __ai_eval_pin_next_dir_0
+
+  lda Board88, x
+  and #$07
+  cmp #QUEEN_TYPE
+  beq __ai_eval_pin_apply_0
+  sta $f6
+  ldy $f2
+  lda PinSliderTypes, y
+  cmp $f6
+  bne __ai_eval_pin_next_dir_0
+
+__ai_eval_pin_apply_0:
+  ldy $f5
+  lda PinnedPiecePenalty, y
+  beq __ai_eval_pin_next_dir_0
+  ldx $f1
+  beq __ai_eval_pin_black_piece_0
+  jsr SubtractEvalUnsigned
+  jmp __ai_eval_pin_next_dir_0
+
+__ai_eval_pin_black_piece_0:
+  jsr AddEvalUnsigned
+
+__ai_eval_pin_next_dir_0:
+  inc $f2
+  lda $f2
+  cmp #$08
+  bne __ai_eval_pin_dir_loop_0
   rts
 
 ;
